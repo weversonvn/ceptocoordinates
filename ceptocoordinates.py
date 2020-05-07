@@ -22,11 +22,7 @@ def get_name(cep, first=True):
             return False
         try:
             address = pycep_correios.get_address_from_cep(cep)
-        except ValueError:
-            return False
-        except pycep_correios.exceptions.BaseException:
-            return False
-        except KeyError:
+        except (ValueError, KeyError, pycep_correios.exceptions.BaseException):
             return False
         return address['logradouro'] + " " + address['bairro'] \
             + " " + address['cidade']
@@ -82,14 +78,11 @@ def main(filename):
             row = {'id': id, 'cep': cep}
             cepnotfound = cepnotfound.append(row, ignore_index=True)
         idx = idx + 1
-    latloncep = latloncep.astype({'id': int})
-    latlon = latlon.astype({'id': int})
-    cepfound = cepfound.astype({'id': int})
-    cepnotfound = cepnotfound.astype({'id': int})
-    latloncep.to_csv('latloncep.csv', index=False)
-    latlon.to_csv('latlon.csv', index=False)
-    cepfound.to_csv('cepfound.csv', index=False)
-    cepnotfound.to_csv('cepnotfound.csv', index=False)
+    files = {'latloncep': latloncep, 'latlon': latlon, 'cepfound': cepfound,
+             'cepnotfound': cepnotfound}
+    for name, dt in files.items():
+        dt = dt.astype({'id': int})
+        dt.to_csv(str(name) + '.csv', index=False)
 
 if __name__ == "__main__":
     main(sys.argv[1])
