@@ -51,20 +51,18 @@ def main(filename):
     df = pd.read_excel(filename) # loads excel file
     ceps = df['CEP'].values # get cep values in file
     ids = df['ID'].values # get id values in file
-    idx = 0
     latloncep = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'cep': []})
     latlon = pd.DataFrame({'id': [], 'lat': [], 'lon': []})
     cepfound = pd.DataFrame({'bairro': [], 'cep': [], 'cidade': [],
                              'logradouro': [], 'uf': [], 'complemento': [],
                              'id': []})
     cepnotfound = pd.DataFrame({'id': [], 'cep': []})
-    for cep in ceps: # do the following for each cep
+    for cep, id in zip(ceps, ids):
         try:
             query = get_name(cep) # try to get query from correios
         except AttributeError:
             break # if something wrong happens then stop searching
-        id = ids[idx]
-        if id % 10 == 0:
+        if id % 100 == 0:
             print("Processando id " + str(id))
         if query: # do the following if cep is found on correios
             lat, lon = get_json(query, cep)
@@ -80,7 +78,6 @@ def main(filename):
         else: # do the following if cep is not found on correios
             row = {'id': id, 'cep': cep}
             cepnotfound = cepnotfound.append(row, ignore_index=True)
-        idx = idx + 1
     files = {'latloncep': latloncep, 'latlon': latlon, 'cepfound': cepfound,
              'cepnotfound': cepnotfound}
     for name, dt in files.items():
