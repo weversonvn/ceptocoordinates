@@ -59,7 +59,10 @@ def main(filename):
                              'id': []})
     cepnotfound = pd.DataFrame({'id': [], 'cep': []})
     for cep in ceps: # do the following for each cep
-        query = get_name(cep)
+        try:
+            query = get_name(cep) # try to get query from correios
+        except AttributeError:
+            break # if something wrong happens then stop searching
         id = ids[idx]
         if id % 10 == 0:
             print("Processando id " + str(id))
