@@ -18,6 +18,8 @@ import pandas as pd
 def get_name(cep, first=True):
     """Get the street name from postal office website."""
     if first:
+        if pycep_correios.validate_cep(cep) is False:
+            return False
         try:
             address = pycep_correios.get_address_from_cep(cep)
         except ValueError:
