@@ -15,19 +15,13 @@ import json
 import pycep_correios
 import pandas as pd
 
-def get_name(cep, first=True):
+def get_name(cep):
     """Get the street name from postal office website."""
-    if first:
-        if pycep_correios.validate_cep(cep) is False:
-            return False
-        try:
-            address = pycep_correios.get_address_from_cep(cep)
-        except (ValueError, KeyError, pycep_correios.exceptions.BaseException):
-            return False
-        return address['logradouro'] + " " + address['bairro'] \
-            + " " + address['cidade']
-    else:
-        return pycep_correios.get_address_from_cep(cep)
+    try:
+        address = pycep_correios.get_address_from_cep(cep)
+    except (ValueError, KeyError, pycep_correios.exceptions.BaseException):
+        return False
+    return pycep_correios.get_address_from_cep(cep)
 
 def get_json(query, cep):
     """Get the coordinates based on the street name."""
@@ -56,12 +50,14 @@ def main(filename):
         if id <= last: # run the code below from the last cep searched
             continue
         try:
-            query = get_name(cep) # try to get query from correios
+            address = get_name(cep) # try to get query from correios
         except AttributeError:
             break # if something wrong happens then stop searching
         if id % 100 == 0:
             print("Processando id " + str(id))
-        if query: # do the following if cep is found on correios
+        if address: # do the following if cep is found on correios
+            query = address['logradouro'] + " " + address['bairro'] \
+                    + " " + address['cidade']
             lat, lon = get_json(query, cep) # try to get coordinates
             if lat: # checks if coordinates were found
                 row_cep = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
@@ -69,9 +65,8 @@ def main(filename):
                 latloncep = latloncep.append(row_cep, ignore_index=True)
                 latlon = latlon.append(row, ignore_index=True)
             else: # if coordinates were not found
-                row = get_name(cep, False) # stores venue data
-                row['id'] = id # and append the id
-                cepfound = cepfound.append(row, ignore_index=True)
+                address['id'] = id # and append the id
+                cepfound = cepfound.append(address, ignore_index=True)
         else: # do the following if cep is not found on correios
             row = {'id': id, 'cep': cep}
             cepnotfound = cepnotfound.append(row, ignore_index=True)
