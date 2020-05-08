@@ -112,4 +112,7 @@ def csvthings():
         return latloncep, latlon, cepfound, cepnotfound, last
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    try:
+        main(sys.argv[1])
+    except IndexError:
+        print("You should add a .xlsx file as arg.")
