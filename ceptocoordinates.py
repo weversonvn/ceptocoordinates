@@ -42,19 +42,23 @@ def get_json(query, cep):
 
 def main(filename):
     """Run the main function of script."""
+    print("Loading file " + str(filename))
     df = pd.read_excel(filename) # loads excel file
     ceps = df['CEP'].values # get cep values in file
     ids = df['ID'].values # get id values in file
     latloncep, latlon, cepfound, cepnotfound, last = csvthings()
+    print("Processing ids (this will only be updated in multiples " \
+          + "of 1000)")
     for cep, id in zip(ceps, ids):
         if id <= last: # run the code below from the last cep searched
             continue
         try:
             address = get_name(cep) # try to get query from correios
         except AttributeError:
+            print("API limit, preparing to exit")
             break # if something wrong happens then stop searching
-        if id % 100 == 0:
-            print("Processando id " + str(id))
+        if id % 1000 == 0:
+            print("Processing id " + str(id))
         if address: # do the following if cep is found on correios
             query = address['logradouro'] + " " + address['bairro'] \
                     + " " + address['cidade']
@@ -72,9 +76,11 @@ def main(filename):
             cepnotfound = cepnotfound.append(row, ignore_index=True)
     files = {'latloncep': latloncep, 'latlon': latlon, 'cepfound': cepfound,
              'cepnotfound': cepnotfound} # creates a dict with all dfs
+    print("Writing .csv files")
     for name, dt in files.items():  # it was supposed to be df in here
         dt = dt.astype({'id': int}) # but I mistyped :)
         dt.to_csv(str(name) + '.csv', index=False) # write csv file
+    print("Done!")
 
 def csvthings():
     """Do things to handle with .csv files."""
@@ -89,6 +95,7 @@ def csvthings():
         cepnotfound = pd.DataFrame({'id': [], 'cep': []})
         return latloncep, latlon, cepfound, cepnotfound, 0
     else: # if the file exists, loads df's (or create empty)
+        print(".csv file found. Loading")
         try:
             latloncep = pd.read_csv('latloncep.csv')
         except FileNotFoundError:
@@ -112,7 +119,8 @@ def csvthings():
         return latloncep, latlon, cepfound, cepnotfound, last
 
 if __name__ == "__main__":
+    print(__doc__)
     try:
         main(sys.argv[1])
     except IndexError:
-        print("You should add a .xlsx file as arg.")
+        print("You should add a .xlsx file as arg")
