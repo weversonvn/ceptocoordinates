@@ -61,7 +61,7 @@ def main(filename):
             print("Processing id " + str(id))
         if address: # do the following if cep is found on correios
             query = address['logradouro'] + " " + address['bairro'] \
-                    + " " + address['cidade']
+                    + " " + address['cidade'] + " brasil"
             lat, lon = get_json(query, cep) # try to get coordinates
             if lat: # checks if coordinates were found
                 row_cep = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
