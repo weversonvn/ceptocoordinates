@@ -51,13 +51,10 @@ def main(filename):
     df = pd.read_excel(filename) # loads excel file
     ceps = df['CEP'].values # get cep values in file
     ids = df['ID'].values # get id values in file
-    latloncep = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'cep': []})
-    latlon = pd.DataFrame({'id': [], 'lat': [], 'lon': []})
-    cepfound = pd.DataFrame({'bairro': [], 'cep': [], 'cidade': [],
-                             'logradouro': [], 'uf': [], 'complemento': [],
-                             'id': []})
-    cepnotfound = pd.DataFrame({'id': [], 'cep': []})
+    latloncep, latlon, cepfound, cepnotfound, last = csvthings()
     for cep, id in zip(ceps, ids):
+        if id <= last: # run the code below from the last cep searched
+            continue
         try:
             query = get_name(cep) # try to get query from correios
         except AttributeError:
@@ -65,24 +62,59 @@ def main(filename):
         if id % 100 == 0:
             print("Processando id " + str(id))
         if query: # do the following if cep is found on correios
-            lat, lon = get_json(query, cep)
-            if lat:
+            lat, lon = get_json(query, cep) # try to get coordinates
+            if lat: # checks if coordinates were found
                 row_cep = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
                 row = {'id': id, 'lat': lat, 'lon': lon}
                 latloncep = latloncep.append(row_cep, ignore_index=True)
                 latlon = latlon.append(row, ignore_index=True)
-            else:
-                row = get_name(cep, False)
-                row['id'] = id
+            else: # if coordinates were not found
+                row = get_name(cep, False) # stores venue data
+                row['id'] = id # and append the id
                 cepfound = cepfound.append(row, ignore_index=True)
         else: # do the following if cep is not found on correios
             row = {'id': id, 'cep': cep}
             cepnotfound = cepnotfound.append(row, ignore_index=True)
     files = {'latloncep': latloncep, 'latlon': latlon, 'cepfound': cepfound,
-             'cepnotfound': cepnotfound}
-    for name, dt in files.items():
-        dt = dt.astype({'id': int})
-        dt.to_csv(str(name) + '.csv', index=False)
+             'cepnotfound': cepnotfound} # creates a dict with all dfs
+    for name, dt in files.items():  # it was supposed to be df in here
+        dt = dt.astype({'id': int}) # but I mistyped :)
+        dt.to_csv(str(name) + '.csv', index=False) # write csv file
+
+def csvthings():
+    """Do things to handle with .csv files."""
+    try: # checks if already exists a csv file
+        latlon = pd.read_csv('latlon.csv')
+    except FileNotFoundError: # if not, creates empty df's
+        latloncep = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'cep': []})
+        latlon = pd.DataFrame({'id': [], 'lat': [], 'lon': []})
+        cepfound = pd.DataFrame({'bairro': [], 'cep': [], 'cidade': [],
+                                 'logradouro': [], 'uf': [],
+                                 'complemento': [], 'id': []})
+        cepnotfound = pd.DataFrame({'id': [], 'cep': []})
+        return latloncep, latlon, cepfound, cepnotfound, 0
+    else: # if the file exists, loads df's (or create empty)
+        try:
+            latloncep = pd.read_csv('latloncep.csv')
+        except FileNotFoundError:
+            latloncep = pd.DataFrame({'id': [], 'lat': [],
+                                      'lon': [], 'cep': []})
+        try:
+            cepfound = pd.read_csv('cepfound.csv')
+        except FileNotFoundError:
+            cepfound = pd.DataFrame({'bairro': [], 'cep': [], 'cidade': [],
+                                     'logradouro': [], 'uf': [],
+                                     'complemento': [], 'id': []})
+        try:
+            cepnotfound = pd.read_csv('cepnotfound.csv')
+        except FileNotFoundError:
+            cepnotfound = pd.DataFrame({'id': [], 'cep': []})
+        last = latlon['id'].max()       # search for the last cep
+        if cepfound['id'].max() > last: # evaluated in each file 
+            last = cepfound['id'].max()
+        if cepnotfound['id'].max() > last:
+            last = cepnotfound['id'].max()
+        return latloncep, latlon, cepfound, cepnotfound, last
 
 if __name__ == "__main__":
     main(sys.argv[1])
