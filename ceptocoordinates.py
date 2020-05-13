@@ -14,6 +14,7 @@ import urllib # to open urls
 import json # to get lat and lon from open street map
 import pycep_correios # to get venue from correios
 import pandas as pd # to handle with data
+from tqdm import tqdm # te quiero demasiado <3 (shows progress bar)
 
 def get_name(cep):
     """Get the street name from postal office website."""
@@ -47,9 +48,7 @@ def main(filename):
     ceps = df['CEP'].values # get cep values in file
     ids = df['ID'].values # get id values in file
     latloncep, latlon, cepfound, cepnotfound, last, lastdf = csvthings()
-    print("Processing ids (this will only be updated in multiples " \
-          + "of 50)")
-    for cep, id in zip(ceps, ids):
+    for cep, id in zip(ceps, tqdm(ids)):
         if id <= last: # run the code below from the last cep searched
             continue
         lastcep = ceps[id] # it's same id because ceps starts with 1
@@ -70,8 +69,6 @@ def main(filename):
         except AttributeError:
             print("API limit, preparing to exit")
             break # if something wrong happens then stop searching
-        if id % 50 == 0:
-            print("Processing id " + str(id))
         if address: # do the following if cep is found on correios
             query = address['logradouro'] + " " + address['bairro'] \
                     + " " + address['cidade'] + " brasil"
