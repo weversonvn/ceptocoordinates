@@ -47,7 +47,7 @@ def main(filename):
     df = pd.read_excel(filename) # loads excel file
     ceps = df['CEP'].values # get cep values in file
     ids = df['ID'].values # get id values in file
-    latloncep, latlon, cepfound, cepnotfound, last, lastdf = csvthings()
+    latloncep, cepfound, cepnotfound, last, lastdf = csvthings()
     for cep, id in zip(ceps, tqdm(ids)):
         if id <= last: # run the code below from the last cep searched
             continue
@@ -55,14 +55,11 @@ def main(filename):
         if cep == lastcep: # if it's same cep again it just copys it
             if lastdf == 'latloncep':
                 latloncep = copy_row(latloncep, id)
-                latlon = copy_row(latlon, id)
-                continue
             elif lastdf == 'cepfound':
                 cepfound = copy_row(cepfound, id)
-                continue
             else:
                 cepnotfound = copy_row(cepnotfound, id)
-                continue
+            continue
 
         try: # here starts the real search
             address = get_name(cep) # try to get query from correios
@@ -74,10 +71,8 @@ def main(filename):
                     + " " + address['cidade'] + " brasil"
             lat, lon = get_json(query, cep) # try to get coordinates
             if lat: # checks if coordinates were found
-                row_cep = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
-                row = {'id': id, 'lat': lat, 'lon': lon}
-                latloncep = latloncep.append(row_cep, ignore_index=True)
-                latlon = latlon.append(row, ignore_index=True)
+                row = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
+                latloncep = latloncep.append(row, ignore_index=True)
                 lastdf = 'latloncep'
             else: # if coordinates were not found
                 address['id'] = id # and append the id
@@ -88,7 +83,7 @@ def main(filename):
             cepnotfound = cepnotfound.append(row, ignore_index=True)
             lastdf = 'cepnotfound'
 
-    files = {'latloncep': latloncep, 'latlon': latlon, 'cepfound': cepfound,
+    files = {'latloncep': latloncep, 'cepfound': cepfound,
              'cepnotfound': cepnotfound} # creates a dict with all dfs
     print("Writing .csv files")
     for name, dt in files.items():  # it was supposed to be df in here
@@ -99,23 +94,17 @@ def main(filename):
 def csvthings():
     """Do things to handle with .csv files."""
     try: # checks if already exists a csv file
-        latlon = pd.read_csv('latlon.csv')
+        latloncep = pd.read_csv('latloncep.csv')
     except FileNotFoundError: # if not, creates empty df's
         latloncep = pd.DataFrame({'id': [], 'lat': [], 'lon': [], 'cep': []})
-        latlon = pd.DataFrame({'id': [], 'lat': [], 'lon': []})
         cepfound = pd.DataFrame({'bairro': [], 'cep': [], 'cidade': [],
                                  'logradouro': [], 'uf': [],
                                  'complemento': [], 'id': []})
         cepnotfound = pd.DataFrame({'id': [], 'cep': []})
         lastdf = 'latloncep'
-        return latloncep, latlon, cepfound, cepnotfound, 0, lastdf
+        return latloncep, cepfound, cepnotfound, 0, lastdf
     else: # if the file exists, loads df's (or create empty)
         print(".csv file found. Loading")
-        try:
-            latloncep = pd.read_csv('latloncep.csv')
-        except FileNotFoundError:
-            latloncep = pd.DataFrame({'id': [], 'lat': [],
-                                      'lon': [], 'cep': []})
         try:
             cepfound = pd.read_csv('cepfound.csv')
         except FileNotFoundError:
@@ -134,7 +123,7 @@ def csvthings():
         if cepnotfound['id'].max() > last:
             last = cepnotfound['id'].max()
             lastdf = 'cepfound'
-        return latloncep, latlon, cepfound, cepnotfound, last, lastdf
+        return latloncep, cepfound, cepnotfound, last, lastdf
 
 def copy_row(df, id):
     """Copies the last row of df and writes it again."""
