@@ -51,7 +51,7 @@ def main(filename):
     for cep, id in zip(ceps, tqdm(ids)):
         if id <= last: # run the code below from the last cep searched
             continue
-        lastcep = ceps[id] # it's same id because ceps starts with 1
+        lastcep = ceps[id-2] # stores last cep evaluated
         if cep == lastcep: # if it's same cep again it just copys it
             if lastdf == 'latloncep':
                 latloncep = copy_row(latloncep, id)
