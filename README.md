@@ -10,6 +10,8 @@ This script receives a list of brazilian postal codes and returns the latitude a
 * [Pandas](https://pandas.pydata.org/)
 * [tqdm](https://tqdm.github.io/)
 
+Requirements can be easily installed using [**requirements.txt**](requirements.txt) file.
+
 ## Usage
 
 You should simple run `ceptocoordinates.py` file parsing a _.xlsx_ file as argument. The _.xlsx_ must contain a column named **CEP**, with CEP values, and a column named **ID**, with ID values related to CEP. Column names are case sensitive. It's recommended to name the **.xlsx** file only with uncapitalized letters, without spaces or special characters (see **.csv** files style), because this might deny file loading as the code don't handle complex filenames. Data will be saved on three **.csv** files:
