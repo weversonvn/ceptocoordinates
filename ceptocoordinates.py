@@ -3,9 +3,9 @@
 """
 CEP to coordinates (latitude and longitude).
 
-This scripts receives a brazilian postal code and returns the latitude
-and longitude coordinates related to this postal code, based on info
-provided by Open Street Map.
+This script receives list of brazilian postal code and returns the
+latitude and longitude coordinates related to this postal code, based
+on information provided by Open Street Map (OSM).
 
 """
 
@@ -26,19 +26,20 @@ def get_name(cep):
 
 def get_json(query, cep):
     """Get the coordinates based on the street name."""
-    query_quote = "'" + query + " " + cep + "'"
-    query_parse = urllib.parse.quote(query_quote.encode('utf-8'))
+    query_quote = "'" + query + " " + cep + "'" # to search on OSM
+    query_parse = urllib.parse.quote(
+        query_quote.encode('utf-8')) # convert non-url characters
     url = "https://nominatim.openstreetmap.org/search?q=" \
-        + query_parse + "&format=json"
-    try:
+        + query_parse + "&format=json" # url to get lat lon data
+    try: # nominatim returns a json, the first data is stored
         with urllib.request.urlopen(url) as data:
             obj = json.loads(data.read().decode())[0]
-    except IndexError:
-        if cep == "":
-            return False, False
-        else:
+    except IndexError: # if there is no data
+        if cep == "": # if already tried twice
+            return False, False # return false so no latlon were got
+        else: # if its second time then search again without cep value
             return get_json(query, "")
-    else:
+    else: # if everything's ok then returns latlon values
         return obj['lat'], obj['lon']
 
 def main(filename):
