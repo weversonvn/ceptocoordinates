@@ -12,6 +12,11 @@ on information provided by Open Street Map (OSM).
 import sys # basic system library
 import urllib # to open urls
 import json # to get lat and lon from open street map
+import logging # to record log events
+# log config is because pycep_correios generates a config and it
+# couldn't be overwritten later before python 3.8
+logging.basicConfig(filename='exec.log', level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s', datefmt='%b %d %H:%M:%S')
 import pycep_correios # to get venue from correios
 import pandas as pd # to handle with data
 from tqdm import tqdm # te quiero demasiado <3 (shows progress bar)
@@ -44,11 +49,12 @@ def get_json(query, cep):
 
 def main(filename):
     """Run the main function of script."""
-    print("Loading file " + str(filename))
+    logging.info(f"Loading file {filename}")
     df = pd.read_excel(filename) # loads excel file
     ceps = df['CEP'].values # get cep values in file
     ids = df['ID'].values # get id values in file
     latloncep, cepfound, cepnotfound, last, lastdf = csvthings()
+    logging.debug(f"Last ID evaluated: {last}")
     for cep, id in zip(ceps, tqdm(ids)):
         if id <= last: # run the code below from the last cep searched
             continue
@@ -65,7 +71,8 @@ def main(filename):
         try: # here starts the real search
             address = get_name(cep) # try to get query from correios
         except AttributeError:
-            print("API limit, preparing to exit")
+            logging.error("API limit, preparing to exit")
+            logging.debug(f"IDs processed: {id-last-1}")
             break # if something wrong happens then stop searching
         if address: # do the following if cep is found on correios
             query = address['logradouro'] + " " + address['bairro'] \
@@ -86,11 +93,11 @@ def main(filename):
 
     files = {'latloncep': latloncep, 'cepfound': cepfound,
              'cepnotfound': cepnotfound} # creates a dict with all dfs
-    print("Writing .csv files")
+    logging.info("Writing .csv files")
     for name, dt in files.items():  # it was supposed to be df in here
         dt = dt.astype({'id': int}) # but I mistyped :)
         dt.to_csv(str(name) + '.csv', index=False) # write csv file
-    print("Done!")
+    logging.info("Done!")
 
 def csvthings():
     """Do things to handle with .csv files."""
@@ -105,7 +112,7 @@ def csvthings():
         lastdf = 'latloncep'
         return latloncep, cepfound, cepnotfound, 0, lastdf
     else: # if the file exists, loads df's (or create empty)
-        print(".csv file found. Loading")
+        logging.info("File latloncep.csv found. Loading others")
         try:
             cepfound = pd.read_csv('cepfound.csv')
         except FileNotFoundError:
@@ -133,8 +140,15 @@ def copy_row(df, id):
     return df.append(row, ignore_index=True)
 
 if __name__ == "__main__":
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
     print(__doc__)
+    logging.info('Starting')
     try:
         main(sys.argv[1])
     except IndexError:
-        print("You should add a .xlsx file as arg")
+        logging.ERROR("A .xlsx file wasn't parsed as an argument")
+        logging.INFO("You should add a .xlsx file as an argument")
