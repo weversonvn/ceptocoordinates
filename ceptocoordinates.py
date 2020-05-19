@@ -27,7 +27,7 @@ def get_name(cep):
         address = pycep_correios.get_address_from_cep(cep)
     except (ValueError, KeyError, pycep_correios.exceptions.BaseException):
         return False
-    return pycep_correios.get_address_from_cep(cep)
+    return address
 
 def get_json(query, cep):
     """Get the coordinates based on the street name."""
@@ -55,49 +55,59 @@ def main(filename):
     ids = df['ID'].values # get id values in file
     latloncep, cepfound, cepnotfound, last, lastdf = csvthings()
     logging.debug(f"Last ID evaluated: {last}")
-    for cep, id in zip(ceps, tqdm(ids)):
-        if id <= last: # run the code below from the last cep searched
-            continue
-        lastcep = ceps[id-2] # stores last cep evaluated
-        if cep == lastcep: # if it's same cep again it just copys it
-            if lastdf == 'latloncep':
-                latloncep = copy_row(latloncep, id)
-            elif lastdf == 'cepfound':
-                cepfound = copy_row(cepfound, id)
-            else:
-                cepnotfound = copy_row(cepnotfound, id)
-            continue
-
-        try: # here starts the real search
-            address = get_name(cep) # try to get query from correios
-        except AttributeError:
-            logging.error("API limit, preparing to exit")
-            logging.debug(f"IDs processed: {id-last-1}")
-            break # if something wrong happens then stop searching
-        if address: # do the following if cep is found on correios
-            query = address['logradouro'] + " " + address['bairro'] \
-                    + " " + address['cidade'] + " brasil"
-            lat, lon = get_json(query, cep) # try to get coordinates
-            if lat: # checks if coordinates were found
-                row = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
-                latloncep = latloncep.append(row, ignore_index=True)
-                lastdf = 'latloncep'
-            else: # if coordinates were not found
-                address['id'] = id # and append the id
-                cepfound = cepfound.append(address, ignore_index=True)
-                lastdf = 'cepfound'
-        else: # do the following if cep is not found on correios
-            row = {'id': id, 'cep': cep}
-            cepnotfound = cepnotfound.append(row, ignore_index=True)
-            lastdf = 'cepnotfound'
-
-    files = {'latloncep': latloncep, 'cepfound': cepfound,
-             'cepnotfound': cepnotfound} # creates a dict with all dfs
-    logging.info("Writing .csv files")
-    for name, dt in files.items():  # it was supposed to be df in here
-        dt = dt.astype({'id': int}) # but I mistyped :)
-        dt.to_csv(str(name) + '.csv', index=False) # write csv file
-    logging.info("Done!")
+    try:
+        for cep, id in zip(ceps, tqdm(ids)):
+            if id <= last: # run code below from the last cep searched
+                continue
+            lastcep = ceps[id-2] # stores last cep evaluated
+            if cep == lastcep: # if its same cep again it just copys it
+                if lastdf == 'latloncep':
+                    latloncep = copy_row(latloncep, id)
+                elif lastdf == 'cepfound':
+                    cepfound = copy_row(cepfound, id)
+                else:
+                    cepnotfound = copy_row(cepnotfound, id)
+                continue
+            try: # here starts the real search
+                address = get_name(cep) # try to get query from pycep
+            except AttributeError as err:
+                logging.error("API limit on pycep_correios, preparing to exit")
+                logging.debug(f"IDs processed: {id-last-1}")
+                break # if something wrong happens then stop searching
+            if address: # do the following if cep is found on correios
+                query = address['logradouro'] + " " + address['bairro'] \
+                        + " " + address['cidade'] + " brasil"
+                try: # try to get coordinates
+                    lat, lon = get_json(query, cep)
+                except urllib.error.URLError as err:
+                    logging.error("Error while trying to get lat and lon")
+                    logging.debug(err)
+                    logging.error("Preparing to exit")
+                    logging.debug(f"IDs processed: {id-last-1}")
+                    break
+                if lat: # checks if coordinates were found
+                    row = {'id': id, 'lat': lat, 'lon': lon, 'cep': cep}
+                    latloncep = latloncep.append(row, ignore_index=True)
+                    lastdf = 'latloncep'
+                else: # if coordinates were not found
+                    address['id'] = id # and append the id
+                    cepfound = cepfound.append(address, ignore_index=True)
+                    lastdf = 'cepfound'
+            else: # do the following if cep is not found on correios
+                row = {'id': id, 'cep': cep}
+                cepnotfound = cepnotfound.append(row, ignore_index=True)
+                lastdf = 'cepnotfound'
+    except Exception as err: # if something unexpected happens
+        logging.error("Something unexpected happend here: ")
+        logging.error(err) # shows what happened
+    finally: # save data even if an unhandled exception happens
+        files = {'latloncep': latloncep, 'cepfound': cepfound,
+                'cepnotfound': cepnotfound} # creates a dict with dfs
+        logging.info("Writing .csv files")
+        for name, dt in files.items():  # it was supposed to be df in
+            dt = dt.astype({'id': int}) # here but I mistyped :)
+            dt.to_csv(str(name) + '.csv', index=False) # write csv file
+        logging.info("Done!")
 
 def csvthings():
     """Do things to handle with .csv files."""
